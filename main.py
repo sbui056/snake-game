@@ -71,7 +71,7 @@ def astar(start, goal, snake_body):
 
 # reset game function
 def reset_game():
-    global snake_position, snake_body, direction, change_to, score, fruit_position, fruit_spawn, game_over_flag
+    global snake_position, snake_body, direction, change_to, score, fruit_position, fruit_spawn, game_over_flag, snake_speed
     snake_position = [100, 50]
     snake_body = [[100, 50], [90, 50], [80, 50], [70, 50]]
     direction = 'RIGHT'
@@ -81,6 +81,7 @@ def reset_game():
                       random.randrange(1, (window_y // 10)) * 10]
     fruit_spawn = True
     game_over_flag = False  # Reset the game over flag
+    snake_speed = 15
 
 # Initialize Pygame
 pygame.init()
@@ -249,6 +250,9 @@ while running:
     # Check if snake has eaten the fruit
     if snake_position[0] == fruit_position[0] and snake_position[1] == fruit_position[1]:
         score += 1  # Increase score
+        # Example: Increasing speed as score increases
+        if score >= 1:
+            snake_speed += 1  # Speed up each fruit eaten
         apple_crunch_sound.play()  # Play fruit crunch sound
         fruit_spawn = False  # Fruit needs to respawn
     else:
