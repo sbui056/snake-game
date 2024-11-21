@@ -9,6 +9,65 @@ black = pygame.Color(0, 0, 0)  # Color for snake body
 white = pygame.Color(255, 255, 255)  # Color for the fruit
 red = pygame.Color(255, 0, 0)  # Color for game over text
 green = pygame.Color(0, 255, 0)  # Background color
+blue = pygame.Color(50, 50, 255)
+gray = pygame.Color(169, 169, 169) 
+
+import heapq
+ai_mode = False
+
+# messing with ai
+# Function to draw the button
+def draw_button():
+    button_color = blue if ai_mode else gray
+    font = pygame.font.SysFont('times new roman', 30)
+    button_surface = font.render('AI Mode', True, white)
+    button_rect = pygame.Rect(window_x - 145, 20, 120, 40)
+    pygame.draw.rect(screen, button_color, button_rect)
+    screen.blit(button_surface, (window_x - 140, 25))
+    return button_rect
+
+# messing around with A*
+def astar(start, goal, snake_body):
+    grid_size = (window_x // 10, window_y // 10)  # Grid dimensions
+    directions = [(0, -10), (0, 10), (-10, 0), (10, 0)]  # Possible moves: up, down, left, right
+
+    # Heuristic: Manhattan distance
+    def heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    # Priority queue and other data structures
+    open_set = []
+    heapq.heappush(open_set, (0, start))  # (priority, node)
+    came_from = {}
+    g_score = {start: 0}  # Cost to reach each node
+    f_score = {start: heuristic(start, goal)}  # Estimated total cost
+
+    while open_set:
+        _, current = heapq.heappop(open_set)
+
+        # Check if we've reached the goal
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.insert(0, current)
+                current = came_from[current]
+            return path
+
+        for dx, dy in directions:
+            neighbor = (current[0] + dx, current[1] + dy)
+
+            # Check bounds and avoid the snake's body
+            if (0 <= neighbor[0] < window_x and 0 <= neighbor[1] < window_y and
+                neighbor not in snake_body):
+                tentative_g_score = g_score[current] + 1
+
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+    return []  # Return an empty path if no solution exists
 
 # Initialize Pygame
 pygame.init()
@@ -64,16 +123,25 @@ def game_over():
 # Main game loop
 running = True
 while running:
+    screen.fill(black)  # Fill the screen with black (background)
+    button_rect = draw_button()  # Draw AI mode button
     for event in pygame.event.get():
-        # Capture key presses for direction changes
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if button_rect.collidepoint(event.pos):
+                ai_mode = not ai_mode
+
+        if event.type == pygame.KEYDOWN and not ai_mode:
+            if event.key == pygame.K_UP and direction != 'DOWN':
                 change_to = 'UP'
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN and direction != 'UP':
                 change_to = 'DOWN'
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT and direction != 'RIGHT':
                 change_to = 'LEFT'
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT and direction != 'LEFT':
                 change_to = 'RIGHT'
     
     # Prevent the snake from going in the opposite direction
@@ -85,6 +153,21 @@ while running:
         direction = 'LEFT'
     if change_to == 'RIGHT' and direction != 'LEFT':
         direction = 'RIGHT'
+
+    # ai mess
+    # Move the snake (AI or manual)
+    if ai_mode:
+        path = astar(tuple(snake_position), tuple(fruit_position), set(map(tuple, snake_body)))
+        if path:
+            next_position = path[0]
+            if next_position[0] > snake_position[0]:
+                direction = 'RIGHT'
+            elif next_position[0] < snake_position[0]:
+                direction = 'LEFT'
+            elif next_position[1] > snake_position[1]:
+                direction = 'DOWN'
+            elif next_position[1] < snake_position[1]:
+                direction = 'UP'
 
     # Update the snake's position based on the direction
     if direction == 'UP':
@@ -113,8 +196,6 @@ while running:
                           random.randrange(1, (window_y // 10)) * 10]
 
     fruit_spawn = True  # Set fruit_spawn to True to spawn a new fruit
-
-    screen.fill(black)  # Fill the screen with green (background)
 
     # Draw the snake
     for pos in snake_body:
