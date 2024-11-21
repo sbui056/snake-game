@@ -16,7 +16,7 @@ import heapq
 ai_mode = False
 
 # messing with ai
-# Function to draw the button
+# Function to draw the ai toggle button
 def draw_button():
     button_color = blue if ai_mode else gray
     font = pygame.font.SysFont('times new roman', 30)
@@ -69,12 +69,32 @@ def astar(start, goal, snake_body):
 
     return []  # Return an empty path if no solution exists
 
+# reset game function
+def reset_game():
+    global snake_position, snake_body, direction, change_to, score, fruit_position, fruit_spawn, game_over_flag
+    snake_position = [100, 50]
+    snake_body = [[100, 50], [90, 50], [80, 50], [70, 50]]
+    direction = 'RIGHT'
+    change_to = direction
+    score = 0
+    fruit_position = [random.randrange(1, (window_x // 10)) * 10,
+                      random.randrange(1, (window_y // 10)) * 10]
+    fruit_spawn = True
+    game_over_flag = False  # Reset the game over flag
+
 # Initialize Pygame
 pygame.init()
 
 # Initialize pygame mixer for sound effects
 pygame.mixer.init()
+
 apple_crunch_sound = pygame.mixer.Sound("assets/sounds/apple_crunch_sound.wav")  # Sound when fruit is eaten
+bump_sound = pygame.mixer.Sound("assets/sounds/bump_sound.wav")
+snake_move_sound = pygame.mixer.Sound("assets/sounds/snake_move_sound.mp3")
+
+pygame.mixer.music.load("assets/sounds/background_music.mp3")
+pygame.mixer.music.set_volume(0.1)
+pygame.mixer.music.play(-1) #play indefinitely
 
 # Set up the display window
 window_x = 720  # Window width
@@ -110,21 +130,51 @@ def show_score(choice, color, font, size):
 
 # Function to handle game over
 def game_over():
+    global game_over_flag  # Make sure to modify the global flag
+    if not game_over_flag:  # If the game is not already over
+        bump_sound.play()  # Play the bump sound
+        game_over_flag = True  # Set the game over flag to True
+
     my_font = pygame.font.SysFont('times new roman', 50)  # Font for game over text
     game_over_surface = my_font.render('Your score is: ' + str(score), True, red)  # Render game over text
     game_over_rect = game_over_surface.get_rect()  # Get the position of the game over text
     game_over_rect.midtop = (screen.get_width() // 2, screen.get_height() // 4)  # Center the text
     screen.blit(game_over_surface, game_over_rect)  # Blit the game over text to the screen
+
+    # Render and display the "Press 'R' to restart" message
+    restart_surface = my_font.render('Press "R" to restart', True, red)
+    restart_rect = restart_surface.get_rect()
+    restart_rect.midtop = (screen.get_width() // 2, screen.get_height() // 2)  # Position below the game over message
+    screen.blit(restart_surface, restart_rect)  # Blit the restart message
+
     pygame.display.flip()  # Update the display
-    time.sleep(3)  # Wait for 2 seconds before quitting
-    pygame.quit()  # Close Pygame
-    quit()  # Exit the game
 
 # Main game loop
+game_over_flag = False  # This flag will be used to check if the game is over
 running = True
+previous_direction = None
 while running:
     screen.fill(black)  # Fill the screen with black (background)
     button_rect = draw_button()  # Draw AI mode button
+
+
+    if game_over_flag:  # If the game is over, display the game over screen and wait for a restart
+        game_over()  # Display game over
+        pygame.display.update()  # Update the screen
+
+        # Check for restart key press ('R')
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:  # Press 'R' to restart the game
+                    reset_game()  # Reset all game variables
+                    running = True  # Restart the game loop
+                    break  # Exit the event loop to restart
+
+        continue  # Skip the rest of the loop while waiting for restart
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -133,16 +183,25 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if button_rect.collidepoint(event.pos):
                 ai_mode = not ai_mode
+        
+        # Handle restart game with the 'R' key
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:  # Press 'R' to restart the game
+                reset_game()
 
         if event.type == pygame.KEYDOWN and not ai_mode:
-            if event.key == pygame.K_UP and direction != 'DOWN':
+            if event.key == pygame.K_UP and direction != 'DOWN' and direction != 'UP':  # Only play sound if direction changes
                 change_to = 'UP'
-            if event.key == pygame.K_DOWN and direction != 'UP':
+                snake_move_sound.play()
+            if event.key == pygame.K_DOWN and direction != 'UP' and direction != 'DOWN':  # Only play sound if direction changes
                 change_to = 'DOWN'
-            if event.key == pygame.K_LEFT and direction != 'RIGHT':
+                snake_move_sound.play()
+            if event.key == pygame.K_LEFT and direction != 'RIGHT' and direction != 'LEFT':  # Only play sound if direction changes
                 change_to = 'LEFT'
-            if event.key == pygame.K_RIGHT and direction != 'LEFT':
+                snake_move_sound.play()
+            if event.key == pygame.K_RIGHT and direction != 'LEFT' and direction != 'RIGHT':  # Only play sound if direction changes
                 change_to = 'RIGHT'
+                snake_move_sound.play()
     
     # Prevent the snake from going in the opposite direction
     if change_to == 'UP' and direction != 'DOWN':
@@ -168,6 +227,11 @@ while running:
                 direction = 'DOWN'
             elif next_position[1] < snake_position[1]:
                 direction = 'UP'
+        # Play sound only if the direction changes
+            if  direction != previous_direction:
+                direction = direction  # Update direction to new direction
+                snake_move_sound.play()  # Play sound when AI moves
+                previous_direction = direction  # Update previous direction
 
     # Update the snake's position based on the direction
     if direction == 'UP':
@@ -184,7 +248,7 @@ while running:
 
     # Check if snake has eaten the fruit
     if snake_position[0] == fruit_position[0] and snake_position[1] == fruit_position[1]:
-        score += 10  # Increase score
+        score += 1  # Increase score
         apple_crunch_sound.play()  # Play fruit crunch sound
         fruit_spawn = False  # Fruit needs to respawn
     else:
@@ -206,17 +270,20 @@ while running:
 
     # Check if snake hits the wall
     if snake_position[0] < 0 or snake_position[0] > window_x - 10:
+        bump_sound.play()
         game_over()  # Game over if the snake hits the wall horizontally
     if snake_position[1] < 0 or snake_position[1] > window_y - 10:
+        bump_sound.play()
         game_over()  # Game over if the snake hits the wall vertically
 
     # Check if the snake hits its own body
     for block in snake_body[1:]:  # Skip the first block (head)
         if snake_position[0] == block[0] and snake_position[1] == block[1]:
+            bump_sound.play()
             game_over()  # Game over if the snake hits itself
 
     # Display the score
-    show_score(1, white, 'times new roman', 20)
+    show_score(1, white, 'DejaVu Sans', 40)
 
     # Update the display
     pygame.display.update()
