@@ -13,6 +13,10 @@ green = pygame.Color(0, 0, 255)
 # Initialize Pygame
 pygame.init()
 
+# initialize pygame sounds!
+pygame.mixer.init()
+apple_crunch_sound = pygame.mixer.Sound("assets/sounds/apple_crunch_sound.wav")
+
 # Set up the display
 window_x = 720
 window_y = 480
@@ -93,6 +97,7 @@ while running:
     snake_body.insert(0, list(snake_position))
     if snake_position[0] == fruit_position[0] and snake_position[1] == fruit_position[1]:
         score += 10
+        apple_crunch_sound.play()
         fruit_spawn = False
     else:
         snake_body.pop()
