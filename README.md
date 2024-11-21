@@ -2,4 +2,4 @@
 
 This is a simple Snake game using pygame.
 
-Implemented data structures: set and deque.
+There's an AI mode using A* pathfinding algorithm.
