@@ -1,5 +1,4 @@
 import pygame
-import time
 import random
 
 # Defining variables
@@ -20,11 +19,12 @@ ai_mode = False
 def draw_button():
     button_color = blue if ai_mode else gray
     font = pygame.font.SysFont('times new roman', 30)
-    button_surface = font.render('AI Mode', True, white)
-    button_rect = pygame.Rect(window_x - 145, 20, 120, 40)
+    button_surface = font.render('AI Mode: ' + ('ON' if ai_mode else 'OFF'), True, white)
+    button_rect = pygame.Rect(window_x - 190, 20, 180, 45)  # Adjust button size and position
     pygame.draw.rect(screen, button_color, button_rect)
-    screen.blit(button_surface, (window_x - 140, 25))
+    screen.blit(button_surface, (window_x - 190, 25))
     return button_rect
+
 
 # messing around with A*
 def astar(start, goal, snake_body):
@@ -71,9 +71,10 @@ def astar(start, goal, snake_body):
 
 # reset game function
 def reset_game():
-    global snake_position, snake_body, direction, change_to, score, fruit_position, fruit_spawn, game_over_flag, snake_speed
+    global snake_position, snake_body, snake_body_set, direction, change_to, score, fruit_position, fruit_spawn, game_over_flag, snake_speed
     snake_position = [100, 50]
     snake_body = [[100, 50], [90, 50], [80, 50], [70, 50]]
+    snake_body_set = set(map(tuple, snake_body)) # Convert snake body list to a set for faster collision checks
     direction = 'RIGHT'
     change_to = direction
     score = 0
@@ -111,6 +112,7 @@ snake_body = [
                 [80, 50],
                 [70, 50]
             ]
+snake_body_set = set(map(tuple, snake_body)) # Convert snake body list to a set for faster collision checks
 direction = 'RIGHT'  # Snake initially moves to the right
 change_to = direction  # Variable to track direction change
 
@@ -281,8 +283,7 @@ while running:
         game_over()  # Game over if the snake hits the wall vertically
 
     # Check if the snake hits its own body
-    for block in snake_body[1:]:  # Skip the first block (head)
-        if snake_position[0] == block[0] and snake_position[1] == block[1]:
+    if tuple(snake_position) in snake_body_set:
             bump_sound.play()
             game_over()  # Game over if the snake hits itself
 
